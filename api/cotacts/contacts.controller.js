@@ -1,4 +1,3 @@
-/*const mongoose = require("mongoose");*/
 const Joi = require("joi");
 
 const ContactsModel = require("./contacts.model");
@@ -15,7 +14,7 @@ class ContactsController {
   
     async getContactById(req, res, next) {
       try {
-          const contact = ContactsModel.findById(req.params.contactId);
+          const contact = await ContactsModel.findById(req.params.contactId);
           return contact ? res.status(200).send(contact) : res.status(404).send({ message: "Not found" });
       } catch (err) {
           next(err);
@@ -61,7 +60,7 @@ class ContactsController {
             subscription: Joi.string().required(),
             password: Joi.string().required()
         });  
-        ContactController.checkValidationError(createSchemaValidator, req, res, next);
+        ContactsController.checkValidationError(createSchemaValidator, req, res, next);
     }
 
     validateContactUpdate(req, res, next) {
@@ -73,7 +72,7 @@ class ContactsController {
             password: Joi.string(),
             token: Joi.string()
         }); 
-        ContactController.checkValidationError(updateSchemaValidator, req, res, next);
+        ContactsController.checkValidationError(updateSchemaValidator, req, res, next);
     }
   
     static checkValidationError(schema, req, res, next) {

@@ -1,5 +1,8 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const cors = require('cors')
+const logger = require('morgan');
+const contactsRouter = require("./cotacts/contacts.routes");
 
 require("dotenv").config();
 
@@ -23,14 +26,17 @@ class ContactServer {
 
     initServer() {
         this.server = express(); 
+
     }
 
     initMiddlewares() {
         this.server.use(express.json());
+        this.server.use(cors({ origin: 'http://localhost:3000' }));
+        this.server.use(logger('dev'))
     }
 
     initRoures() {
-        this.server.use('/api', contactRouter);
+        this.server.use('/api', contactsRouter);
     }
 
     async initDb() {
@@ -69,4 +75,4 @@ class ContactServer {
 }
 
 
-module.exports = ContactServer;
+module.exports =  ContactServer;
