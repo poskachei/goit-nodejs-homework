@@ -3,69 +3,64 @@ const Joi = require('joi');
 const contacts = require("./contacts");
 
 class ContactController {
-  getContacts(req, res, next) {
+  async getContacts(req, res, next) {
     try {
-      const contactsList = contacts.listContacts();
-      return res.send(contactsList);
+        const contactsList = await contacts.listContacts();
+        return res.send(contactsList);
     } catch (err) {
       next(err);
     }
   }
 
-  getContactById(req, res, next) {
-    try{
-      const contactId = Number.parseInt(req.params.contactId)
-      const contact = contacts.getContactById(contactId)
-      return contact ? res.send(contact) : res.status(404).send({ message: "Not found" })
-    } catch (err) {
-      next(err);
-    }
-
-  }
-
-  createContact(req, res, next) {
+  async getContactById(req, res, next) {
     try {
-      const { name, email, phone } = req.body;
-      contacts.addContact(name, email, phone);
-      
-      return res.status(201).send({ "message": "Contact created" })
+        const contactId = Number.parseInt(req.params.contactId)
+        const contact = await contacts.getContactById(contactId)
+        return contact ? res.send(contact) : res.status(404).send({ message: "Not found" })
     } catch (err) {
       next(err);
     }
   }
 
-  updateContact(req, res, next) {
+  async createContact(req, res, next) {
     try {
-      const id = Number.parseInt(req.params.contactId)
-      const contactToUpdate =  contacts.updateContact(id, req.body)
-      return contactToUpdate ?
+        const { name, email, phone } = req.body;
+        await contacts.addContact(name, email, phone);     
+        return res.status(201).send({ "message": "Contact created" })
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateContact(req, res, next) {
+    try {
+        const id = Number.parseInt(req.params.contactId)
+        const contactToUpdate = await contacts.updateContact(id, req.body)
+        return contactToUpdate ?
           res.status(200).send({ "message": "contact updated" }) :
           res.status(404).send({ "message": "Not found" })
-
-  } catch (err) {
+    } catch (err) {
       next(err)
-  }
+    }
   }
 
-  deleteContact(req, res, next) {
+  async deleteContact(req, res, next) {
     try {
       const contactId = Number.parseInt(req.params.contactId)
-      const targetContactsIndex = contacts.removeContact(contactId);
-
+      const targetContactsIndex = await contacts.removeContact(contactId);
       return targetContactsIndex ?
           res.status(200).send({ "message": "contact deleted" }) :
           res.status(404).send({ "message": 'Not found' })
-
     } catch (err) {
       next(err);
     }
   }
 
   validateContactUpdate(req, res, next) {
-    const updateSchemaValidator = Joi.object({
-      name: Joi.string(),
-      email: Joi.string(),
-    });
+      const updateSchemaValidator = Joi.object({
+        name: Joi.string(),
+        email: Joi.string(),
+      });
 
     ContactController.checkValidationError(
       updateSchemaValidator,
@@ -94,8 +89,8 @@ class ContactController {
     const { error } = schema.validate(req.body);
 
     if (error) {
-      const { message } = error.details[0];
-      return res.status(400).send({ error: message });
+        const { message } = error.details[0];
+        return res.status(400).send({ error: message });
     }
     next();
   }
@@ -107,9 +102,8 @@ class ContactController {
     );
 
     if (targetContactsIndex === -1) {
-      return res.status(404).send({ message: 'Not found' });
+        return res.status(404).send({ message: 'Not found' });
     }
-
     return targetContactsIndex;
   }
 }

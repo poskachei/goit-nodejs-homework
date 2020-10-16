@@ -1,38 +1,41 @@
+const { promises: fsPromises } = require('fs')
 const fs = require('fs');
 const path = require('path');
 
-const contactsPath = path.join(__dirname, './db/contacts.json')
-const contactList = fs.readFileSync(contactsPath, 'utf-8');
-const contacts = JSON.parse(contactList);
+const contactsPath = path.join(__dirname, './db/contacts.json');
 
 
-function listContacts() {
+async function listContacts() {
+  const contactList = await fsPromises.readFile(contactsPath, 'utf-8');
+  const contacts = JSON.parse(contactList);
   return contacts;
 }
 
-
-function getContactById(contactId) {
-    return contacts.find(contact => contactId && contact.id === contactId)
+async function getContactById(contactId) {
+  const contacts = await listContacts;
+  return contacts.find(contact => contactId && contact.id === contactId)
 }   
 
-function removeContact(contactId) {
-  const idxOfContact =  getContactById(contactId)
-    if (!idxOfContact) {
-        return false
-    }
- 
-    const newContact = contacts.filter(contact => contact.id !== contactId);
+async function removeContact(contactId) {
 
-    fs.writeFile(contactsPath, JSON.stringify(newContact), error => {
-      if (error) {
-        return console.log(error);
-      }
-    });
-    return newContact;
+  const idxOfContact = await getContactById(contactId)
+  if (!idxOfContact) {
+    return false
+  }
+
+  const contacts = await listContacts;
+  const newContact = contacts.filter(contact => contact.id !== contactId);
+
+  fs.writeFile(contactsPath, JSON.stringify(newContact), error => {
+    if (error) {
+      return console.log(error);
+    }
+  });
+  return newContact;
 }
 
-function addContact(name, email, phone) {
-
+async function addContact(name, email, phone) {
+  const contacts = await listContacts;
     contacts.push({
       id: contacts.length + 1,
       name: name,
@@ -45,14 +48,13 @@ function addContact(name, email, phone) {
         return console.log(error);
       }
     });
-
     return contacts;
 }
 
-function updateContact(contactId, dataUpdate) {
-  const contactInContacts = getContactById(contactId)
+async function updateContact(contactId, dataUpdate) {
+  const contactInContacts = await getContactById(contactId)
   if (!contactInContacts) {
-      return false
+    return false
   }
   const data = listContacts()
   let updated

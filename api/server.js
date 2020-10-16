@@ -17,7 +17,7 @@ class ContactService {
     this.initServer();
     this.initMiddleware();
     this.initRoutes();
-    this.erroHandler();
+    this.errorHandler();
     this.startListening();
   }
 
@@ -35,7 +35,7 @@ class ContactService {
     this.server.use('/api', contactRouter);
   }
 
-  erroHandler() {
+  errorHandler() {
     this.server.use((err, req, res, next) => {
       if (err) {
         const code = err.status ? err.status : 400;
