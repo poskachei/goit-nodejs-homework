@@ -53,7 +53,6 @@ class UserServer {
             console.log("Server was closed with connect to db")
             process.exit(1)            
         }
-
         console.log("Database connection successful")  
     }
 
