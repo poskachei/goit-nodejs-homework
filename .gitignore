@@ -39,6 +39,10 @@ build/Release
 
 # Dependency directories
 node_modules/
+<<<<<<< HEAD
+=======
+
+>>>>>>> 82cd65147f89ce51786ad48d52ebe516e094fa7e
 jspm_packages/
 
 # TypeScript v1 declaration files
@@ -101,4 +105,8 @@ dist
 .dynamodb/
 
 # TernJS port file
+<<<<<<< HEAD
 .tern-port
+=======
+.tern-port
+>>>>>>> 82cd65147f89ce51786ad48d52ebe516e094fa7e
