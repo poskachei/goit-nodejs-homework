@@ -1,6 +1,13 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require("bcrypt");
 const Joi = require('joi');
+const { promises: fsPromises } = require('fs');
+const path = require('path');
+const Avatar = require('avatar-builder');
+
+const imagemin = require('imagemin');
+const imageminJpegtran = require('imagemin-jpegtran');
+const imageminPngquant = require('imagemin-pngquant');
 
 const UserModel = require("./users.model");
 
@@ -11,15 +18,32 @@ const TOKEN_SECRET = process.env.TOKEN_SECRET;
 class UsersController {
 
     async getUserСurrent(req,res,next){
-      try {
-          const user = req.user;
+        try {
+            const user = req.user;
        
-          return res.status(200).send({user:{
+            return res.status(200).send({user:{
               email:user.email,
-              subscription:user.subscription
-          }})
-      } catch (error) {
-        next(error)
+              subscription:user.subscription,
+              avatarURL:user.avatarURL
+            }})
+        } catch (error) {
+          next(error)
+        }
+    }
+
+    async updateUser(req, res, next) {
+      try {
+        const newAvatarUrl = 'http://localhost:3000/images/' + req.file.filename
+        const id = req.user.id;
+        req.user.avatarURL = newAvatarUrl;
+        const updateContact = await UserModel.findByIdAndUpdate(id, req.user);
+  
+        if (!updateContact) {
+          res.status(400).send({ message: 'Not found' });
+        }
+        res.status(200).send({ message: 'contact updated' , avatarURL: newAvatarUrl});
+      } catch (err) {
+        next(err);
       }
     }
 
@@ -39,6 +63,7 @@ class UsersController {
             return res.status(201).send({
               user: {
                   email,
+                  avatarURL: 'http://localhost:3000/images/' + req.file.filename,
                   subscription: "free"
               }
           })
@@ -78,7 +103,7 @@ class UsersController {
     }
 
     async authorize(req, res, next) {
-      try {
+        try {
           const authorizationHeader = req.get('Authorization') || '';
 
           let token;
@@ -104,10 +129,62 @@ class UsersController {
 
           next()
 
-      } catch (err) {
-        next(err)
+        } catch (err) {
+          next(err)
+        }
+   }
+
+   async createAvatarURL(req, res, next) {
+      if (req.file) {
+        return next();
       }
-  }
+      try {
+          const randomNumber = (Math.random() * (100 - 10) + 100).toString();
+          const pathFolder = Avatar.Cache.folder("../tmp");
+          const avatar = await Avatar.triangleBuilder(randomNumber, { cache: pathFolder });
+          await fsPromises.writeFile(pathFolder + '/' + filename, avatar);
+
+          req.file = {
+            destination: pathFolder,
+            filename,
+            path: path.join(pathFolder + '/' + filename),
+          };
+          next();
+        } catch (error) {
+          console.log(error);
+        }   
+   }
+
+   async  minifyImage(req, res, next) {
+
+    try {
+        const MINIFIED_DIR = "public/images";
+
+        await imagemin([req.file.destination], {
+            destination: MINIFIED_DIR,
+            plugins: [
+                imageminJpegtran(),
+                imageminPngquant({
+                    quality: [0.6, 0.8]
+                })
+            ]
+        });
+        
+        const { filename } = req.file;
+        
+        req.file = {
+            ...req.file,
+            path: path.join(MINIFIED_DIR, filename),
+            destination: MINIFIED_DIR
+        }
+
+        console.log('Finished processing file...');
+    } catch(err) {
+        console.log(err);
+    }
+
+    next();
+}
 
     validateCreatedUser(req, res, next) {
       const rulesSchema = Joi.object({
