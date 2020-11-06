@@ -7,7 +7,7 @@ UsersRouter.post('/users/register', UsersController.validateCreatedUser, upload.
 UsersRouter.post('/users/login', UsersController.validateCreatedUser, UsersController.signIn);
 UsersRouter.post('/users/logout', UsersController.authorize, UsersController.logOut);
 UsersRouter.get('/users/current', UsersController.authorize, UsersController.getUserСurrent);
-UsersRouter.patch('/user/avatar', UsersController.authorize, upload.single('avatar'), UsersController.minifyImage, UsersController.updateUser)
+UsersRouter.patch('/users/avatar', UsersController.authorize, upload.single('avatar'), UsersController.minifyImage, UsersController.updateUser)
 
 
 module.exports = UsersRouter;
