@@ -1,7 +1,6 @@
 const express = require("express");
-const logger = require('morgan');
+const logger = require("morgan");
 const mongoose = require("mongoose");
-const cors = require('cors');
 
 const contactsRouter = require("./contacts/contacts.routes");
 const usersRouter = require("./users/users.routes");
@@ -32,13 +31,13 @@ class UserServer {
 
     initMiddlewares() {
         this.server.use(express.json());
-        this.server.use(cors({ origin: 'http://localhost:3000' }))
+        this.server.use('/images', express.static('public/images'));
         this.server.use(logger('dev'));
     }
 
     initRoures() {
         this.server.use('/api/contacts', contactsRouter);
-        this.server.use('/', usersRouter);
+        this.server.use('/api/users', usersRouter);
     }
 
     async initDbConnection() {
@@ -53,6 +52,7 @@ class UserServer {
             console.log("Server was closed with connect to db")
             process.exit(1)            
         }
+
         console.log("Database connection successful")  
     }
 
