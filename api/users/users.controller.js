@@ -4,6 +4,9 @@ const Joi = require('joi');
 const { promises: fsPromises } = require('fs');
 const path = require('path');
 const Avatar = require('avatar-builder');
+const sgMail = require('@sendgrid/mail');
+const { v4: uuidv4 } = require('uuid');
+
 
 const imagemin = require('imagemin');
 const imageminJpegtran = require('imagemin-jpegtran');
@@ -13,6 +16,7 @@ const UserModel = require("./users.model");
 
 require('dotenv').config();
 
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 const TOKEN_SECRET = process.env.TOKEN_SECRET;
 
 class UsersController {
@@ -132,43 +136,42 @@ class UsersController {
         } catch (err) {
           next(err)
         }
-   }
+    }
 
-   async createAvatarURL(req, res, next) {
-      if (req.file) {
-        return next();
-      }
-      try {
-          const randomNumber = (Math.random() * (100 - 10) + 100).toString();
-          const pathFolder = Avatar.Cache.folder("../tmp");
-          const avatar = await Avatar.triangleBuilder(randomNumber, { cache: pathFolder });
-          await fsPromises.writeFile(pathFolder + '/' + filename, avatar);
+    async createAvatarURL(req, res, next) {
+        if (req.file) {
+            return next();
+        }
+        try {
+            const randomNumber = (Math.random() * (100 - 10) + 100).toString();
+            const pathFolder = Avatar.Cache.folder("../tmp");
+            const avatar = await Avatar.triangleBuilder(randomNumber, { cache: pathFolder });
+            await fsPromises.writeFile(pathFolder + '/' + filename, avatar);
 
-          req.file = {
-            destination: pathFolder,
-            filename,
-            path: path.join(pathFolder + '/' + filename),
-          };
+        req.file = {
+          destination: pathFolder,
+          filename,
+          path: path.join(pathFolder + '/' + filename),
+        };
           next();
         } catch (error) {
           console.log(error);
         }   
-   }
+    }
 
-   async  minifyImage(req, res, next) {
+    async  minifyImage(req, res, next) {
+        try {
+            const MINIFIED_DIR = "public/images";
 
-    try {
-        const MINIFIED_DIR = "public/images";
-
-        await imagemin([req.file.destination], {
-            destination: MINIFIED_DIR,
-            plugins: [
-                imageminJpegtran(),
-                imageminPngquant({
-                    quality: [0.6, 0.8]
-                })
-            ]
-        });
+            await imagemin([req.file.destination], {
+                destination: MINIFIED_DIR,
+                plugins: [
+                    imageminJpegtran(),
+                    imageminPngquant({
+                        quality: [0.6, 0.8]
+                    })
+                ]
+            });
         
         const { filename } = req.file;
         
@@ -179,12 +182,48 @@ class UsersController {
         }
 
         console.log('Finished processing file...');
-    } catch(err) {
-        console.log(err);
-    }
+        } catch(err) {
+          console.log(err);
+        }
 
     next();
-}
+    }
+  
+    async verificationUrlToken(req, res, next) {
+      try {
+        const verificationToken = req.params.verificationToken;
+        const userToVerifyted = await UserModel.findOne({ verificationToken });
+  
+        if (!userToVerifyted) {
+          res.status(404).send({ message: 'Not Found ' });
+        }
+  
+        await UsersController.verifyUser(userToVerifyted._id);
+  
+        res.status(200).send({ message: 'User Verufication Ok' });
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  
+    static async sendMailUser(user) {
+      const newTokenUser = await UsersController.saveVerifcationToken(user._id);
+  
+      const verificationUrl = `http://localhost:3000/auth/verify/${newTokenUser}`;
+      try {
+        const msg = {
+          to: user.email,
+          from: process.env.SENDMAILER_USER,
+          subject: 'Sending with SendGrid is Fun',
+          text: 'and easy to do anywhere, even with Node.js',
+          html: `<a href=${verificationUrl}> ${verificationUrl}</a>`,
+        };
+  
+        return sgMail.send(msg);
+      } catch (error) {
+        console.log(error);
+      }
+    }    
 
     validateCreatedUser(req, res, next) {
       const rulesSchema = Joi.object({
@@ -213,8 +252,32 @@ class UsersController {
           return res.status(400).send({ message: "Ошибка от Joi или другой валидационной библиотеки" });
       }
       next();
-  }
-
+    }
+    
+    static async saveVerifcationToken(userId) {
+      const token = uuidv4();
+      const { verificationToken } = await UserModel.findByIdAndUpdate(
+        userId,
+        {
+          verificationToken: token,
+        },
+        { new: true },
+      );
+  
+      return verificationToken;
+    }
+  
+    static async verifyUser(userId) {
+      await UserModel.findByIdAndUpdate(userId, {
+        status: 'verified',
+        verificationToken: null,
+      });
+  
+      return 'success';
+    }
+ 
 }
+
+
 
 module.exports = new UsersController;
